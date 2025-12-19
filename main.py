@@ -48,8 +48,7 @@ def main():
 
     player = Player(0, 0)
     all_sprites.add(player)
-    # Trésor normal pour commencer
-    treasure = Artifact(0, 0, is_final_treasure=False)
+    treasure = Artifact(0, 0)
     artifacts_group.add(treasure)
     all_sprites.add(treasure)
 
@@ -77,7 +76,6 @@ def main():
         game_map.load_level(1)
         player.rect.topleft = (96, 96)
         
-        # On remet le trésor normal
         treasure.kill()
         treasure = Artifact(0, 0, is_final_treasure=False)
         artifacts_group.add(treasure)
@@ -105,7 +103,6 @@ def main():
 
         if game_state == "playing":
             
-            # VICTOIRE A 180 POINTS
             if score >= 180:
                 game_state = "victory"
                 save_high_score(score)
@@ -152,15 +149,12 @@ def main():
                 
                 place_object_safely(player, game_map)
                 
-                # --- CHANGEMENT TRESOR ---
-                treasure.kill() # On supprime le vieux vase
-                # On crée le nouveau TRESOR DE PHARAON
+                treasure.kill()
                 treasure = Artifact(0, 0, is_final_treasure=True)
                 artifacts_group.add(treasure)
                 all_sprites.add(treasure)
                 place_object_safely(treasure, game_map)
                 
-                # --- OBLIGATOIRE : RESET ET CREATION DU BOSS ---
                 enemies_group.empty()
                 boss = Enemy(0, 0, is_boss=True)
                 place_enemy_far(boss, game_map, player)
@@ -171,7 +165,11 @@ def main():
                 print("ATTENTION : LE BOSS ARRIVE !")
 
             player.update(game_map.walls)
-            enemies_group.update(player, game_map.walls)
+            
+            # --- MODIFICATION ICI ---
+            # On passe 'enemies_group' pour que les ennemis puissent s'éviter entre eux
+            enemies_group.update(player, game_map.walls, enemies_group)
+            # ------------------------
             
             hits = pygame.sprite.spritecollide(player, artifacts_group, False)
             for hit in hits:

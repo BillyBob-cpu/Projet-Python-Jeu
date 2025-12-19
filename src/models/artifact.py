@@ -5,7 +5,7 @@ class Artifact(pygame.sprite.Sprite):
         super().__init__()
         
         # Choix de l'image selon si c'est le trésor final ou non
-        image_name = "pharaoh_treasure.png" if is_final_treasure else "artifact.png"
+        image_name = "pharaon_treasure.png" if is_final_treasure else "artifact.png"
         
         try:
             self.image = pygame.image.load(f"assets/images/{image_name}").convert_alpha()
