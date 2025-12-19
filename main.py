@@ -4,6 +4,14 @@ from src.models.player import Player
 from src.models.map import Map
 from src.models.artifact import Artifact
 
+def draw_ui(screen, score):
+    # Choisir une police d'écriture (None = police par défaut, 36 = taille)
+    font = pygame.font.Font(None, 36)
+    # Créer l'image du texte (Texte, Antialising, Couleur)
+    text_surface = font.render(f"Score: {score}", True, (255, 255, 255))
+    # Afficher en haut à gauche (10, 10)
+    screen.blit(text_surface, (10, 10))
+
 def main():
     pygame.init()
     screen = pygame.display.set_mode((800, 600))
@@ -42,6 +50,9 @@ def main():
 
         game_map.draw(screen)  
         all_sprites.draw(screen) 
+
+        draw_ui(screen, score) 
+        
         
         pygame.display.flip()
         
