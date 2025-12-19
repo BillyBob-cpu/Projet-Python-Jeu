@@ -2,6 +2,7 @@ import pygame
 import sys
 from src.models.player import Player
 from src.models.map import Map
+from src.models.artifact import Artifact
 
 def main():
     pygame.init()
@@ -12,6 +13,14 @@ def main():
     all_sprites = pygame.sprite.Group()
     
     player = Player(400, 300) 
+
+    artifacts_group = pygame.sprite.Group()
+    
+    treasure = Artifact(600, 150)
+    artifacts_group.add(treasure)
+    all_sprites.add(treasure) 
+    
+    score = 0
     
     all_sprites.add(player)
 
@@ -24,6 +33,12 @@ def main():
                 running = False
 
         player.update(game_map.walls)
+
+        hits = pygame.sprite.spritecollide(player, artifacts_group, True)
+        
+        for hit in hits:
+            score += 10
+            print(f"Trésor trouvé ! Score actuel : {score}")
 
         game_map.draw(screen)  
         all_sprites.draw(screen) 
