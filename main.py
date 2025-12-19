@@ -38,7 +38,7 @@ def draw_ui(screen, score, high_score, level):
 def main():
     pygame.init()
     screen = pygame.display.set_mode((800, 600))
-    pygame.display.set_caption("Archéologie & Enigmes")
+    pygame.display.set_caption("Relic Hunter: Egypt")
     clock = pygame.time.Clock()
 
     game_map = Map()
@@ -107,12 +107,12 @@ def main():
                 game_state = "victory"
                 save_high_score(score)
 
-            # Niveau 1 -> Boost vitesse
+            
             if score >= 30 and not speed_boosted:
                 for enemy in enemies_group: enemy.speed += 1
                 speed_boosted = True
 
-            # NIVEAU 2 (60 pts)
+            
             if score >= 60 and not level_2_unlocked:
                 game_map.load_level(2)
                 level_2_unlocked = True
@@ -128,7 +128,7 @@ def main():
                 if speed_boosted:
                     for enemy in enemies_group: enemy.speed += 1
 
-            # NIVEAU 3 (90 pts)
+        
             if score >= 90 and not level_3_unlocked:
                 game_map.load_level(3)
                 level_3_unlocked = True
@@ -142,7 +142,7 @@ def main():
                 all_sprites.empty()
                 all_sprites.add(player, treasure, enemies_group)
 
-            # NIVEAU 4 : LE BOSS (130 pts)
+            
             if score >= 130 and not level_4_unlocked:
                 game_map.load_level(4)
                 level_4_unlocked = True
@@ -166,10 +166,9 @@ def main():
 
             player.update(game_map.walls)
             
-            # --- MODIFICATION ICI ---
-            # On passe 'enemies_group' pour que les ennemis puissent s'éviter entre eux
+            
             enemies_group.update(player, game_map.walls, enemies_group)
-            # ------------------------
+            
             
             hits = pygame.sprite.spritecollide(player, artifacts_group, False)
             for hit in hits:

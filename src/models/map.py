@@ -52,13 +52,13 @@ class Map:
             "WWWWWWWWWWWW",
         ]
 
-        # NIVEAU 4 : L'Arène du Boss
+        
         self.level_4 = [
             "WWWWWWWWWWWW",
             "W..........W",
-            "W.WW....WW.W", # Piliers aux coins
+            "W.WW....WW.W", 
             "W.WW....WW.W",
-            "W..........W", # Grand espace central
+            "W..........W", 
             "W..........W",
             "W.WW....WW.W",
             "W.WW....WW.W",

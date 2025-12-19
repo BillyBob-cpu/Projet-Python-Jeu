@@ -4,16 +4,13 @@ class Artifact(pygame.sprite.Sprite):
     def __init__(self, x, y, is_final_treasure=False):
         super().__init__()
         
-        # Choix de l'image selon si c'est le trésor final ou non
         image_name = "pharaon_treasure.png" if is_final_treasure else "artifact.png"
         
         try:
             self.image = pygame.image.load(f"assets/images/{image_name}").convert_alpha()
-            # Le trésor final peut être un peu plus gros
             size = (60, 60) if is_final_treasure else (40, 40)
             self.image = pygame.transform.scale(self.image, size)
         except FileNotFoundError:
-            # Carré jaune (Or) si pas d'image
             self.image = pygame.Surface((40, 40))
             self.image.fill((255, 215, 0)) 
             
