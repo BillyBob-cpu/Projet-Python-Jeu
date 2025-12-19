@@ -1,46 +1,64 @@
 import pygame
+import math
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, x, y):
+    def __init__(self, x, y, is_boss=False):
         super().__init__()
-        try:
-            self.image = pygame.image.load("assets/images/enemy.png").convert_alpha()
-            self.image = pygame.transform.scale(self.image, (50, 50))
-        except FileNotFoundError:
-            self.image = pygame.Surface((50, 50))
-            self.image.fill((148, 0, 211)) 
-            
+        self.is_boss = is_boss
+        
+        if self.is_boss:
+            # --- CONFIGURATION DU BOSS ---
+            try:
+                self.image = pygame.image.load("assets/images/boss.png").convert_alpha()
+                self.image = pygame.transform.scale(self.image, (80, 80)) # Plus gros !
+            except FileNotFoundError:
+                self.image = pygame.Surface((80, 80))
+                self.image.fill((255, 0, 0)) # Carré rouge si pas d'image
+            self.speed = 4 # Beaucoup plus rapide (Normal = 2)
+        else:
+            # --- CONFIGURATION MOMIE NORMALE ---
+            try:
+                self.image = pygame.image.load("assets/images/enemy.png").convert_alpha()
+                self.image = pygame.transform.scale(self.image, (50, 50))
+            except FileNotFoundError:
+                self.image = pygame.Surface((50, 50))
+                self.image.fill((148, 0, 211))
+            self.speed = 2
+
         self.rect = self.image.get_rect()
         self.rect.topleft = (x, y)
-        self.speed = 2 # Tu peux baisser à 1 si c'est trop dur !
 
     def update(self, player, walls):
-        """
-        Déplacement intelligent : va vers le joueur
-        """
         dx, dy = 0, 0
         
-        # --- 1. Calcul de la direction vers le joueur ---
-        # Est-ce que le joueur est à gauche ou à droite ?
+        # Logique de traque simple
         if player.rect.x > self.rect.x:
             dx = self.speed
         elif player.rect.x < self.rect.x:
             dx = -self.speed
             
-        # Est-ce que le joueur est en haut ou en bas ?
         if player.rect.y > self.rect.y:
             dy = self.speed
         elif player.rect.y < self.rect.y:
             dy = -self.speed
 
-        # --- 2. Mouvement et Collisions (Pour ne pas traverser les murs) ---
-        
-        # Mouvement X
+        # Mouvement X avec collisions
         self.rect.x += dx
-        if pygame.sprite.spritecollideany(self, walls):
-            self.rect.x -= dx # Si on tape un mur, on annule le mouvement X
+        hit_wall = pygame.sprite.spritecollideany(self, walls)
+        if hit_wall:
+            # Si c'est le boss, il casse un peu les murs (glisse mieux)
+            if self.is_boss:
+                 if dx > 0: self.rect.right = hit_wall.rect.left
+                 if dx < 0: self.rect.left = hit_wall.rect.right
+            else:
+                self.rect.x -= dx
 
-        # Mouvement Y
+        # Mouvement Y avec collisions
         self.rect.y += dy
-        if pygame.sprite.spritecollideany(self, walls):
-            self.rect.y -= dy # Si on tape un mur, on annule le mouvement Y
+        hit_wall = pygame.sprite.spritecollideany(self, walls)
+        if hit_wall:
+            if self.is_boss:
+                if dy > 0: self.rect.bottom = hit_wall.rect.top
+                if dy < 0: self.rect.top = hit_wall.rect.bottom
+            else:
+                self.rect.y -= dy

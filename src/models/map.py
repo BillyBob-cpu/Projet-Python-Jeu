@@ -13,7 +13,6 @@ class Map:
         self.walls = pygame.sprite.Group()
         self.current_level = 1
         
-        # NIVEAU 1 : Le Visage
         self.level_1 = [
             "WWWWWWWWWWWW",
             "W..........W",
@@ -27,7 +26,6 @@ class Map:
             "WWWWWWWWWWWW",
         ]
 
-        # NIVEAU 2 : Les Piliers
         self.level_2 = [
             "WWWWWWWWWWWW",
             "W..........W",
@@ -41,16 +39,29 @@ class Map:
             "WWWWWWWWWWWW",
         ]
 
-        # NIVEAU 3 : TA CARTE PERSONNALISÉE
         self.level_3 = [
             "WWWWWWWWWWWW",
             "W..........W",
             "W....W...W.W",
-            "W.W........W", # J'ai ajusté pour que le mur ferme bien à droite
+            "W.W........W",
             "W....W.....W", 
             "W.W.....W..W",
             "W...W.W....W",
             "W.......W..W",
+            "W..........W",
+            "WWWWWWWWWWWW",
+        ]
+
+        # NIVEAU 4 : L'Arène du Boss
+        self.level_4 = [
+            "WWWWWWWWWWWW",
+            "W..........W",
+            "W.WW....WW.W", # Piliers aux coins
+            "W.WW....WW.W",
+            "W..........W", # Grand espace central
+            "W..........W",
+            "W.WW....WW.W",
+            "W.WW....WW.W",
             "W..........W",
             "WWWWWWWWWWWW",
         ]
@@ -61,12 +72,10 @@ class Map:
         self.current_level = level_num
         self.walls.empty()
         
-        if level_num == 1:
-            layout = self.level_1
-        elif level_num == 2:
-            layout = self.level_2
-        else:
-            layout = self.level_3
+        if level_num == 1: layout = self.level_1
+        elif level_num == 2: layout = self.level_2
+        elif level_num == 3: layout = self.level_3
+        else: layout = self.level_4 # Niveau 4
         
         for row_index, row in enumerate(layout):
             for col_index, letter in enumerate(row):
@@ -76,12 +85,10 @@ class Map:
 
     def get_empty_spots(self):
         spots = []
-        if self.current_level == 1:
-            layout = self.level_1
-        elif self.current_level == 2:
-            layout = self.level_2
-        else:
-            layout = self.level_3
+        if self.current_level == 1: layout = self.level_1
+        elif self.current_level == 2: layout = self.level_2
+        elif self.current_level == 3: layout = self.level_3
+        else: layout = self.level_4
 
         for row_index, row in enumerate(layout):
             for col_index, letter in enumerate(row):

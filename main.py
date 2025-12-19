@@ -9,33 +9,28 @@ from src.models.enemy import Enemy
 from src.utils.score_manager import load_high_score, save_high_score
 
 def place_enemy_far(enemy, map_obj, player):
-    """Place un ennemi sur une case vide ET loin du joueur"""
     valid_spots = map_obj.get_empty_spots()
-    
     safe_spots = []
     for spot in valid_spots:
         dist_x = spot[0] - player.rect.x
         dist_y = spot[1] - player.rect.y
         distance = math.sqrt(dist_x**2 + dist_y**2)
-        
         if distance > 300: 
             safe_spots.append(spot)
     
-    if safe_spots:
-        enemy.rect.topleft = random.choice(safe_spots)
-    elif valid_spots:
-        enemy.rect.topleft = random.choice(valid_spots)
+    if safe_spots: enemy.rect.topleft = random.choice(safe_spots)
+    elif valid_spots: enemy.rect.topleft = random.choice(valid_spots)
 
 def place_object_safely(sprite, map_obj):
     valid_spots = map_obj.get_empty_spots()
-    if valid_spots:
-        sprite.rect.topleft = random.choice(valid_spots)
+    if valid_spots: sprite.rect.topleft = random.choice(valid_spots)
 
 def draw_ui(screen, score, high_score, level):
     font = pygame.font.Font(None, 36)
     score_text = font.render(f"Score: {score}", True, (255, 255, 255))
     high_score_text = font.render(f"Record: {high_score}", True, (255, 215, 0))
     level_text = font.render(f"Niveau: {level}", True, (100, 200, 255))
+    if level == 4: level_text = font.render(f"Niveau: BOSS FINAL", True, (255, 50, 50))
     screen.blit(score_text, (10, 10))
     screen.blit(high_score_text, (10, 40))
     screen.blit(level_text, (10, 70))
@@ -53,8 +48,8 @@ def main():
 
     player = Player(0, 0)
     all_sprites.add(player)
-
-    treasure = Artifact(0, 0)
+    # Trésor normal pour commencer
+    treasure = Artifact(0, 0, is_final_treasure=False)
     artifacts_group.add(treasure)
     all_sprites.add(treasure)
 
@@ -65,20 +60,28 @@ def main():
     speed_boosted = False
     level_2_unlocked = False
     level_3_unlocked = False
+    level_4_unlocked = False
 
     font_end = pygame.font.Font(None, 74)
     font_sub = pygame.font.Font(None, 36)
 
     def reset_game():
-        nonlocal score, speed_boosted, level_2_unlocked, level_3_unlocked, game_state
+        nonlocal score, speed_boosted, level_2_unlocked, level_3_unlocked, level_4_unlocked, game_state, treasure
         score = 0
         speed_boosted = False
         level_2_unlocked = False
         level_3_unlocked = False
+        level_4_unlocked = False
         game_state = "playing"
         
         game_map.load_level(1)
         player.rect.topleft = (96, 96)
+        
+        # On remet le trésor normal
+        treasure.kill()
+        treasure = Artifact(0, 0, is_final_treasure=False)
+        artifacts_group.add(treasure)
+        all_sprites.add(treasure)
         place_object_safely(treasure, game_map)
         
         enemies_group.empty()
@@ -94,71 +97,78 @@ def main():
     running = True
     while running:
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            
+            if event.type == pygame.QUIT: running = False
             if game_state != "playing":
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_SPACE:
-                        reset_game()
-                    elif event.key == pygame.K_ESCAPE:
-                        running = False
+                    if event.key == pygame.K_SPACE: reset_game()
+                    elif event.key == pygame.K_ESCAPE: running = False
 
         if game_state == "playing":
             
-            if score >= 130:
+            # VICTOIRE A 180 POINTS
+            if score >= 180:
                 game_state = "victory"
                 save_high_score(score)
 
-            # Boost Vitesse (Niveau 1 -> 30 pts)
+            # Niveau 1 -> Boost vitesse
             if score >= 30 and not speed_boosted:
-                for enemy in enemies_group:
-                    enemy.speed += 1
+                for enemy in enemies_group: enemy.speed += 1
                 speed_boosted = True
 
-            # NIVEAU 2 (60 pts) : Rapides
+            # NIVEAU 2 (60 pts)
             if score >= 60 and not level_2_unlocked:
                 game_map.load_level(2)
                 level_2_unlocked = True
-                
                 player.rect.topleft = (96, 96)
                 place_object_safely(treasure, game_map)
-                
                 enemies_group.empty()
                 for _ in range(2):
                     m = Enemy(0, 0)
                     place_enemy_far(m, game_map, player)
                     enemies_group.add(m)
-                
                 all_sprites.empty()
-                all_sprites.add(player, treasure)
-                all_sprites.add(enemies_group)
-                
-                # On applique le boost pour le niveau 2
+                all_sprites.add(player, treasure, enemies_group)
                 if speed_boosted:
                     for enemy in enemies_group: enemy.speed += 1
 
-            # NIVEAU 3 (90 pts) : LENTES MAIS NOMBREUSES
+            # NIVEAU 3 (90 pts)
             if score >= 90 and not level_3_unlocked:
                 game_map.load_level(3)
                 level_3_unlocked = True
-                
                 player.rect.topleft = (96, 96)
                 place_object_safely(treasure, game_map)
-                
                 enemies_group.empty()
                 for _ in range(3):
                     m = Enemy(0, 0)
                     place_enemy_far(m, game_map, player)
-                    # IMPORTANT : On NE met PAS le boost de vitesse ici
-                    # Elles restent à la vitesse de base (2)
                     enemies_group.add(m)
-                    
                 all_sprites.empty()
-                all_sprites.add(player, treasure)
-                all_sprites.add(enemies_group)
+                all_sprites.add(player, treasure, enemies_group)
+
+            # NIVEAU 4 : LE BOSS (130 pts)
+            if score >= 130 and not level_4_unlocked:
+                game_map.load_level(4)
+                level_4_unlocked = True
                 
-                print("Niveau 3 : Vitesse normale pour les momies !")
+                place_object_safely(player, game_map)
+                
+                # --- CHANGEMENT TRESOR ---
+                treasure.kill() # On supprime le vieux vase
+                # On crée le nouveau TRESOR DE PHARAON
+                treasure = Artifact(0, 0, is_final_treasure=True)
+                artifacts_group.add(treasure)
+                all_sprites.add(treasure)
+                place_object_safely(treasure, game_map)
+                
+                # --- OBLIGATOIRE : RESET ET CREATION DU BOSS ---
+                enemies_group.empty()
+                boss = Enemy(0, 0, is_boss=True)
+                place_enemy_far(boss, game_map, player)
+                enemies_group.add(boss)
+                
+                all_sprites.empty()
+                all_sprites.add(player, treasure, boss)
+                print("ATTENTION : LE BOSS ARRIVE !")
 
             player.update(game_map.walls)
             enemies_group.update(player, game_map.walls)
@@ -179,16 +189,16 @@ def main():
             draw_ui(screen, score, high_score, game_map.current_level)
             
         elif game_state == "game_over":
-            screen.fill((0, 0, 0))
+            screen.fill((50, 0, 0))
             text = font_end.render("GAME OVER", True, (255, 0, 0))
             sub_text = font_sub.render(f"ESPACE: Rejouer  |  ECHAP: Quitter", True, (255, 255, 255))
             screen.blit(text, (800//2 - text.get_width()//2, 600//2 - 50))
             screen.blit(sub_text, (800//2 - sub_text.get_width()//2, 600//2 + 20))
 
         elif game_state == "victory":
-            screen.fill((0, 0, 0))
-            text = font_end.render("VICTOIRE !", True, (0, 255, 0))
-            sub_text = font_sub.render(f"ESPACE: Rejouer  |  ECHAP: Quitter", True, (255, 255, 255))
+            screen.fill((0, 50, 0))
+            text = font_end.render("VICTOIRE ULTIME !", True, (255, 215, 0))
+            sub_text = font_sub.render(f"Tu as vaincu le Boss ! Score: {score}", True, (255, 255, 255))
             screen.blit(text, (800//2 - text.get_width()//2, 600//2 - 50))
             screen.blit(sub_text, (800//2 - sub_text.get_width()//2, 600//2 + 20))
 
