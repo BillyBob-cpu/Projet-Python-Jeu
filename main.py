@@ -26,17 +26,34 @@ def place_object_safely(sprite, map_obj):
     valid_spots = map_obj.get_empty_spots()
     if valid_spots: sprite.rect.topleft = random.choice(valid_spots)
 
+current_track = None
+
 def play_music(track_name):
-    path = f"assets/music/{track_name}"
-    if os.path.exists(path):
+    global current_track
+    if current_track == track_name:
+        return
+
+    possible_paths = [
+        f"assets/music/{track_name}",
+        f"music/{track_name}",
+        f"assets/music/{track_name.lower()}",
+        f"assets/music/{track_name.capitalize()}"
+    ]
+    
+    found_path = None
+    for path in possible_paths:
+        if os.path.exists(path):
+            found_path = path
+            break
+            
+    if found_path:
         try:
-            pygame.mixer.music.load(path)
+            pygame.mixer.music.load(found_path)
             pygame.mixer.music.play(-1)
-            pygame.mixer.music.set_volume(0.5)
-        except pygame.error:
-            print(f"Erreur lecture: {path}")
-    else:
-        print(f"Musique introuvable: {path}")
+            pygame.mixer.music.set_volume(1.0)
+            current_track = track_name
+        except Exception:
+            pass
 
 def draw_ui(screen, score, high_score, level):
     font = pygame.font.Font(None, 36)
@@ -50,7 +67,7 @@ def draw_ui(screen, score, high_score, level):
 
 def main():
     pygame.init()
-    pygame.mixer.init()
+    pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
     
     screen = pygame.display.set_mode((800, 600))
     pygame.display.set_caption("Relic Hunter: Egypt")
@@ -60,8 +77,12 @@ def main():
         menu_bg = pygame.image.load("assets/images/home.jpg").convert()
         menu_bg = pygame.transform.scale(menu_bg, (800, 600))
     except FileNotFoundError:
-        menu_bg = pygame.Surface((800, 600))
-        menu_bg.fill((30, 30, 30))
+        try:
+            menu_bg = pygame.image.load("assets/images/home.png").convert()
+            menu_bg = pygame.transform.scale(menu_bg, (800, 600))
+        except:
+            menu_bg = pygame.Surface((800, 600))
+            menu_bg.fill((30, 30, 30))
 
     game_map = Map()
     all_sprites = pygame.sprite.Group()
@@ -85,12 +106,19 @@ def main():
     level_3_unlocked = False
     level_4_unlocked = False
 
+    target_riddle_level = 1 
+
     font_title = pygame.font.Font(None, 100)
     font_button = pygame.font.Font(None, 50)
+    font_riddle = pygame.font.Font(None, 40)
+    font_input = pygame.font.Font(None, 60)
     font_end = pygame.font.Font(None, 74)
     font_sub = pygame.font.Font(None, 36)
 
-    def reset_game():
+    riddle_input = ""
+    riddle_error = ""
+
+    def start_level_1():
         nonlocal score, speed_boosted, level_2_unlocked, level_3_unlocked, level_4_unlocked, game_state, treasure
         score = 0
         speed_boosted = False
@@ -118,6 +146,58 @@ def main():
         all_sprites.empty()
         all_sprites.add(player, treasure, mummy)
 
+    def load_level_2():
+        nonlocal level_2_unlocked, game_state, speed_boosted
+        game_map.load_level(2)
+        level_2_unlocked = True
+        game_state = "playing"
+        play_music("Level_2.mp3")
+        player.rect.topleft = (96, 96)
+        place_object_safely(treasure, game_map)
+        enemies_group.empty()
+        for _ in range(2):
+            m = Enemy(0, 0)
+            place_enemy_far(m, game_map, player)
+            enemies_group.add(m)
+        all_sprites.empty()
+        all_sprites.add(player, treasure, enemies_group)
+        if speed_boosted:
+            for enemy in enemies_group: enemy.speed += 1
+
+    def load_level_3():
+        nonlocal level_3_unlocked, game_state
+        game_map.load_level(3)
+        level_3_unlocked = True
+        game_state = "playing"
+        play_music("Level_3.mp3")
+        player.rect.topleft = (96, 96)
+        place_object_safely(treasure, game_map)
+        enemies_group.empty()
+        for _ in range(3):
+            m = Enemy(0, 0)
+            place_enemy_far(m, game_map, player)
+            enemies_group.add(m)
+        all_sprites.empty()
+        all_sprites.add(player, treasure, enemies_group)
+
+    def load_level_4():
+        nonlocal level_4_unlocked, game_state, treasure
+        game_map.load_level(4)
+        level_4_unlocked = True
+        game_state = "playing"
+        play_music("Level_boss.mp3")
+        place_object_safely(player, game_map)
+        treasure.kill()
+        treasure = Artifact(0, 0, is_final_treasure=True)
+        artifacts_group.add(treasure)
+        all_sprites.add(treasure)
+        place_object_safely(treasure, game_map)
+        enemies_group.empty()
+        boss = Enemy(600, 500, is_boss=True)
+        enemies_group.add(boss)
+        all_sprites.empty()
+        all_sprites.add(player, treasure, boss)
+
     button_rect = pygame.Rect(300, 400, 200, 60)
 
     running = True
@@ -131,11 +211,51 @@ def main():
             if game_state == "menu":
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if button_rect.collidepoint(mouse_pos):
-                        reset_game()
-            
+                        game_state = "riddle"
+                        target_riddle_level = 1
+                        riddle_input = ""
+                        riddle_error = ""
+
+            elif game_state == "riddle":
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_RETURN:
+                        user_ans = riddle_input.lower().strip()
+                        
+                        success = False
+                        if target_riddle_level == 1:
+                            if "cleopatre" in user_ans or "cléopâtre" in user_ans:
+                                start_level_1()
+                                success = True
+                        elif target_riddle_level == 2:
+                            if "pyramide" in user_ans:
+                                load_level_2()
+                                success = True
+                        elif target_riddle_level == 3:
+                            if "nil" in user_ans:
+                                load_level_3()
+                                success = True
+                        elif target_riddle_level == 4:
+                            if "sphinx" in user_ans:
+                                load_level_4()
+                                success = True
+                        
+                        if not success:
+                            riddle_error = "Mauvaise réponse !"
+                            riddle_input = ""
+                            
+                    elif event.key == pygame.K_BACKSPACE:
+                        riddle_input = riddle_input[:-1]
+                    else:
+                        if len(riddle_input) < 20:
+                            riddle_input += event.unicode
+
             elif game_state != "playing":
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_SPACE: reset_game()
+                    if event.key == pygame.K_SPACE:
+                        game_state = "riddle"
+                        target_riddle_level = 1
+                        riddle_input = ""
+                        riddle_error = ""
                     elif event.key == pygame.K_ESCAPE: running = False
 
         if game_state == "menu":
@@ -154,9 +274,43 @@ def main():
                 text_color = (255, 255, 255)
             
             pygame.draw.rect(screen, (255, 255, 255), button_rect, 3)
-            
             btn_text = font_button.render("JOUER", True, text_color)
             screen.blit(btn_text, (button_rect.centerx - btn_text.get_width()//2, button_rect.centery - btn_text.get_height()//2))
+
+        elif game_state == "riddle":
+            screen.blit(menu_bg, (0, 0))
+            
+            overlay = pygame.Surface((700, 400))
+            overlay.set_alpha(220)
+            overlay.fill((0, 0, 0))
+            screen.blit(overlay, (50, 100))
+            
+            lines = []
+            if target_riddle_level == 1:
+                lines = ["Je suis la derniere reine d'Egypte.", "Amante de Cesar.", "Qui suis-je ?"]
+            elif target_riddle_level == 2:
+                lines = ["Je suis un tombeau triangulaire.", "Je pointe vers le ciel.", "Qui suis-je ?"]
+            elif target_riddle_level == 3:
+                lines = ["Je suis le plus long fleuve.", "Je traverse toute l'Egypte.", "Qui suis-je ?"]
+            elif target_riddle_level == 4:
+                lines = ["Gardien des pyramides.", "Corps de lion, tete d'homme.", "Qui suis-je ?"]
+            
+            y_offset = 120
+            for line in lines:
+                text = font_riddle.render(line, True, (255, 215, 0))
+                screen.blit(text, (400 - text.get_width()//2, y_offset))
+                y_offset += 40
+            
+            pygame.draw.rect(screen, (255, 255, 255), (200, 350, 400, 60), 2)
+            input_surf = font_input.render(riddle_input, True, (255, 255, 255))
+            screen.blit(input_surf, (400 - input_surf.get_width()//2, 360))
+            
+            if riddle_error:
+                err_surf = font_sub.render(riddle_error, True, (255, 50, 50))
+                screen.blit(err_surf, (400 - err_surf.get_width()//2, 430))
+            
+            hint = font_sub.render("(Ecris la reponse et tape ENTREE)", True, (200, 200, 200))
+            screen.blit(hint, (400 - hint.get_width()//2, 500))
 
         elif game_state == "playing":
             
@@ -170,50 +324,22 @@ def main():
                 speed_boosted = True
 
             if score >= 60 and not level_2_unlocked:
-                game_map.load_level(2)
-                level_2_unlocked = True
-                play_music("Level_2.mp3")
-                player.rect.topleft = (96, 96)
-                place_object_safely(treasure, game_map)
-                enemies_group.empty()
-                for _ in range(2):
-                    m = Enemy(0, 0)
-                    place_enemy_far(m, game_map, player)
-                    enemies_group.add(m)
-                all_sprites.empty()
-                all_sprites.add(player, treasure, enemies_group)
-                if speed_boosted:
-                    for enemy in enemies_group: enemy.speed += 1
+                game_state = "riddle"
+                target_riddle_level = 2
+                riddle_input = ""
+                riddle_error = ""
 
             if score >= 90 and not level_3_unlocked:
-                game_map.load_level(3)
-                level_3_unlocked = True
-                play_music("Level_3.mp3")
-                player.rect.topleft = (96, 96)
-                place_object_safely(treasure, game_map)
-                enemies_group.empty()
-                for _ in range(3):
-                    m = Enemy(0, 0)
-                    place_enemy_far(m, game_map, player)
-                    enemies_group.add(m)
-                all_sprites.empty()
-                all_sprites.add(player, treasure, enemies_group)
+                game_state = "riddle"
+                target_riddle_level = 3
+                riddle_input = ""
+                riddle_error = ""
 
             if score >= 130 and not level_4_unlocked:
-                game_map.load_level(4)
-                level_4_unlocked = True
-                play_music("Level_boss.mp3")
-                place_object_safely(player, game_map)
-                treasure.kill()
-                treasure = Artifact(0, 0, is_final_treasure=True)
-                artifacts_group.add(treasure)
-                all_sprites.add(treasure)
-                place_object_safely(treasure, game_map)
-                enemies_group.empty()
-                boss = Enemy(600, 500, is_boss=True)
-                enemies_group.add(boss)
-                all_sprites.empty()
-                all_sprites.add(player, treasure, boss)
+                game_state = "riddle"
+                target_riddle_level = 4
+                riddle_input = ""
+                riddle_error = ""
 
             player.update(game_map.walls)
             enemies_group.update(player, game_map.walls, enemies_group)
