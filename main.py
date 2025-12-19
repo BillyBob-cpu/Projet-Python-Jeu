@@ -2,6 +2,7 @@ import pygame
 import sys
 import random
 import math
+import os
 from src.models.player import Player
 from src.models.map import Map
 from src.models.artifact import Artifact
@@ -25,6 +26,18 @@ def place_object_safely(sprite, map_obj):
     valid_spots = map_obj.get_empty_spots()
     if valid_spots: sprite.rect.topleft = random.choice(valid_spots)
 
+def play_music(track_name):
+    path = f"assets/music/{track_name}"
+    if os.path.exists(path):
+        try:
+            pygame.mixer.music.load(path)
+            pygame.mixer.music.play(-1)
+            pygame.mixer.music.set_volume(0.5)
+        except pygame.error:
+            print(f"Erreur lecture: {path}")
+    else:
+        print(f"Musique introuvable: {path}")
+
 def draw_ui(screen, score, high_score, level):
     font = pygame.font.Font(None, 36)
     score_text = font.render(f"Score: {score}", True, (255, 255, 255))
@@ -37,6 +50,8 @@ def draw_ui(screen, score, high_score, level):
 
 def main():
     pygame.init()
+    pygame.mixer.init()
+    
     screen = pygame.display.set_mode((800, 600))
     pygame.display.set_caption("Relic Hunter: Egypt")
     clock = pygame.time.Clock()
@@ -73,6 +88,8 @@ def main():
         level_4_unlocked = False
         game_state = "playing"
         
+        play_music("level_1.mp3")
+        
         game_map.load_level(1)
         player.rect.topleft = (96, 96)
         
@@ -106,16 +123,18 @@ def main():
             if score >= 180:
                 game_state = "victory"
                 save_high_score(score)
+                pygame.mixer.music.stop()
 
-            
             if score >= 30 and not speed_boosted:
                 for enemy in enemies_group: enemy.speed += 1
                 speed_boosted = True
 
-            
             if score >= 60 and not level_2_unlocked:
                 game_map.load_level(2)
                 level_2_unlocked = True
+                
+                play_music("level_2.mp3")
+                
                 player.rect.topleft = (96, 96)
                 place_object_safely(treasure, game_map)
                 enemies_group.empty()
@@ -128,10 +147,12 @@ def main():
                 if speed_boosted:
                     for enemy in enemies_group: enemy.speed += 1
 
-        
             if score >= 90 and not level_3_unlocked:
                 game_map.load_level(3)
                 level_3_unlocked = True
+                
+                play_music("level_3.mp3")
+                
                 player.rect.topleft = (96, 96)
                 place_object_safely(treasure, game_map)
                 enemies_group.empty()
@@ -142,11 +163,13 @@ def main():
                 all_sprites.empty()
                 all_sprites.add(player, treasure, enemies_group)
 
-            
             if score >= 130 and not level_4_unlocked:
                 game_map.load_level(4)
                 level_4_unlocked = True
                 
+                play_music("boss.mp3")
+                
+                player.rect.topleft = (96, 96)
                 place_object_safely(player, game_map)
                 
                 treasure.kill()
@@ -156,19 +179,14 @@ def main():
                 place_object_safely(treasure, game_map)
                 
                 enemies_group.empty()
-                boss = Enemy(0, 0, is_boss=True)
-                place_enemy_far(boss, game_map, player)
+                boss = Enemy(600, 500, is_boss=True)
                 enemies_group.add(boss)
                 
                 all_sprites.empty()
                 all_sprites.add(player, treasure, boss)
-                print("ATTENTION : LE BOSS ARRIVE !")
 
             player.update(game_map.walls)
-            
-            
             enemies_group.update(player, game_map.walls, enemies_group)
-            
             
             hits = pygame.sprite.spritecollide(player, artifacts_group, False)
             for hit in hits:
@@ -179,6 +197,7 @@ def main():
             if pygame.sprite.spritecollideany(player, enemies_group):
                 game_state = "game_over"
                 save_high_score(score)
+                pygame.mixer.music.stop()
 
         if game_state == "playing":
             game_map.draw(screen)
