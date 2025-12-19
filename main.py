@@ -56,6 +56,13 @@ def main():
     pygame.display.set_caption("Relic Hunter: Egypt")
     clock = pygame.time.Clock()
 
+    try:
+        menu_bg = pygame.image.load("assets/images/home.jpg").convert()
+        menu_bg = pygame.transform.scale(menu_bg, (800, 600))
+    except FileNotFoundError:
+        menu_bg = pygame.Surface((800, 600))
+        menu_bg.fill((30, 30, 30))
+
     game_map = Map()
     all_sprites = pygame.sprite.Group()
     artifacts_group = pygame.sprite.Group()
@@ -69,13 +76,17 @@ def main():
 
     score = 0
     high_score = load_high_score()
-    game_state = "playing"
+    
+    game_state = "menu"
+    play_music("Level_1.mp3")
     
     speed_boosted = False
     level_2_unlocked = False
     level_3_unlocked = False
     level_4_unlocked = False
 
+    font_title = pygame.font.Font(None, 100)
+    font_button = pygame.font.Font(None, 50)
     font_end = pygame.font.Font(None, 74)
     font_sub = pygame.font.Font(None, 36)
 
@@ -88,7 +99,7 @@ def main():
         level_4_unlocked = False
         game_state = "playing"
         
-        play_music("level_1.mp3")
+        play_music("Level_1.mp3")
         
         game_map.load_level(1)
         player.rect.topleft = (96, 96)
@@ -107,18 +118,47 @@ def main():
         all_sprites.empty()
         all_sprites.add(player, treasure, mummy)
 
-    reset_game()
+    button_rect = pygame.Rect(300, 400, 200, 60)
 
     running = True
     while running:
+        mouse_pos = pygame.mouse.get_pos()
+        
         for event in pygame.event.get():
-            if event.type == pygame.QUIT: running = False
-            if game_state != "playing":
+            if event.type == pygame.QUIT:
+                running = False
+            
+            if game_state == "menu":
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if button_rect.collidepoint(mouse_pos):
+                        reset_game()
+            
+            elif game_state != "playing":
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE: reset_game()
                     elif event.key == pygame.K_ESCAPE: running = False
 
-        if game_state == "playing":
+        if game_state == "menu":
+            screen.blit(menu_bg, (0, 0))
+            
+            title_surf = font_title.render("RELIC HUNTER", True, (255, 215, 0))
+            subtitle_surf = font_button.render("EGYPT", True, (255, 255, 255))
+            screen.blit(title_surf, (400 - title_surf.get_width()//2, 100))
+            screen.blit(subtitle_surf, (400 - subtitle_surf.get_width()//2, 180))
+            
+            if button_rect.collidepoint(mouse_pos):
+                pygame.draw.rect(screen, (255, 255, 0), button_rect)
+                text_color = (0, 0, 0)
+            else:
+                pygame.draw.rect(screen, (200, 150, 0), button_rect)
+                text_color = (255, 255, 255)
+            
+            pygame.draw.rect(screen, (255, 255, 255), button_rect, 3)
+            
+            btn_text = font_button.render("JOUER", True, text_color)
+            screen.blit(btn_text, (button_rect.centerx - btn_text.get_width()//2, button_rect.centery - btn_text.get_height()//2))
+
+        elif game_state == "playing":
             
             if score >= 180:
                 game_state = "victory"
@@ -132,9 +172,7 @@ def main():
             if score >= 60 and not level_2_unlocked:
                 game_map.load_level(2)
                 level_2_unlocked = True
-                
-                play_music("level_2.mp3")
-                
+                play_music("Level_2.mp3")
                 player.rect.topleft = (96, 96)
                 place_object_safely(treasure, game_map)
                 enemies_group.empty()
@@ -150,9 +188,7 @@ def main():
             if score >= 90 and not level_3_unlocked:
                 game_map.load_level(3)
                 level_3_unlocked = True
-                
-                play_music("level_3.mp3")
-                
+                play_music("Level_3.mp3")
                 player.rect.topleft = (96, 96)
                 place_object_safely(treasure, game_map)
                 enemies_group.empty()
@@ -166,22 +202,16 @@ def main():
             if score >= 130 and not level_4_unlocked:
                 game_map.load_level(4)
                 level_4_unlocked = True
-                
-                play_music("boss.mp3")
-                
-                player.rect.topleft = (96, 96)
+                play_music("Level_boss.mp3")
                 place_object_safely(player, game_map)
-                
                 treasure.kill()
                 treasure = Artifact(0, 0, is_final_treasure=True)
                 artifacts_group.add(treasure)
                 all_sprites.add(treasure)
                 place_object_safely(treasure, game_map)
-                
                 enemies_group.empty()
                 boss = Enemy(600, 500, is_boss=True)
                 enemies_group.add(boss)
-                
                 all_sprites.empty()
                 all_sprites.add(player, treasure, boss)
 
@@ -199,7 +229,6 @@ def main():
                 save_high_score(score)
                 pygame.mixer.music.stop()
 
-        if game_state == "playing":
             game_map.draw(screen)
             all_sprites.draw(screen)
             draw_ui(screen, score, high_score, game_map.current_level)
